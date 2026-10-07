@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Quicksand', sans-serif;
+  --font-body: 'Nunito Sans', sans-serif;
+  --color-candy-surface: #f6fafe;
+  --color-candy-blue: #00baff;
+  --color-candy-blue-dark: #00658d;
+  --color-candy-pink: #fdb0d7;
+  --color-candy-pink-dark: #884a6c;
+  --color-candy-violet: #603de0;
+  --color-cloud-gray: #f0f4f8;
+}
+
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background-color: #f6fafe;
+  color: #171c1f;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Quicksand', sans-serif;
+}
+
+/* Marshmallow Shadows */
+.shadow-marshmallow-blue {
+  box-shadow: 0 20px 35px -10px rgba(0, 186, 255, 0.22), 0 8px 16px -6px rgba(0, 186, 255, 0.12);
+}
+
+.shadow-marshmallow-pink {
+  box-shadow: 0 20px 35px -10px rgba(253, 176, 215, 0.35), 0 8px 16px -6px rgba(253, 176, 215, 0.2);
+}
+
+.shadow-marshmallow-soft {
+  box-shadow: 0 16px 32px -8px rgba(189, 200, 210, 0.35), 0 4px 10px rgba(189, 200, 210, 0.15);
+}
+
+/* Candy Glossy Buttons */
+.candy-btn-blue {
+  background-color: #00baff;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #008ac2, 0 8px 16px rgba(0, 186, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.candy-btn-blue:hover {
+  background-color: #1ec2ff;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #008ac2, 0 12px 20px rgba(0, 186, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.candy-btn-blue:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #008ac2, 0 4px 8px rgba(0, 186, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.candy-btn-pink {
+  background-color: #fdb0d7;
+  color: #7a3f60;
+  box-shadow: 0 4px 0 #e691be, 0 8px 16px rgba(253, 176, 215, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.candy-btn-pink:hover {
+  background-color: #ffbedf;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #e691be, 0 12px 20px rgba(253, 176, 215, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.candy-btn-pink:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #e691be, 0 4px 8px rgba(253, 176, 215, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.candy-btn-violet {
+  background-color: #7d5fff;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #5c3ce0, 0 8px 16px rgba(125, 95, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.candy-btn-violet:hover {
+  background-color: #8c71ff;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #5c3ce0, 0 12px 20px rgba(125, 95, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.candy-btn-violet:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #5c3ce0;
+}
+
+/* Candy Card Style */
+.candy-card {
+  border-radius: 32px;
+  background-color: #ffffff;
+  border: 1px solid rgba(189, 200, 210, 0.25);
+  box-shadow: 0 16px 32px -8px rgba(0, 186, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* Sparkle Animation */
+@keyframes sparklePulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+  50% { transform: scale(1.15) rotate(10deg); opacity: 1; }
+}
+
+.animate-sparkle {
+  animation: sparklePulse 2.5s infinite ease-in-out;
+}
+
+/* Floating animation */
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: softFloat 3s infinite ease-in-out;
+}

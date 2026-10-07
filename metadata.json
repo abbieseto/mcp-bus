@@ -1,0 +1,6 @@
+{
+  "name": "Sky & Candy Transit",
+  "description": "An Anime Chibi transit application for Singapore's MRT and bus network with vibrant candy aesthetics, interactive maps, and SimplyGo CandyPass wallet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
