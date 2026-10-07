@@ -1,11 +1,45 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Bus, RefreshCw, CheckCircle2, AlertTriangle, ExternalLink, Key, Sparkles, Heart } from 'lucide-react';
-import { LTABusArrivalResponse } from '../types/lta';
+import React, { useState, useEffect, useCallback, useId } from 'react';
+import {
+  Bus,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+  Key,
+  Sparkles,
+  Heart,
+  Bell,
+  BellRing,
+  X,
+  Clock,
+  Volume2,
+} from 'lucide-react';
+import { LTABusArrivalResponse, LTANextBus } from '../types/lta';
 import { sound } from '../utils/audio';
 
 interface LTABusTrackerProps {
   initialBusStopCode?: string;
   initialServiceNo?: string;
+}
+
+export interface WatchedBusArrival {
+  id: string; // e.g. "04121-7-NextBus"
+  busStopCode: string;
+  serviceNo: string;
+  arrivalSlot: 'NextBus' | 'NextBus2' | 'NextBus3';
+  slotLabel: string;
+  estimatedArrival: string;
+  notified: boolean;
+  createdAt: number;
+}
+
+interface TriggeredAlert {
+  id: string;
+  serviceNo: string;
+  busStopCode: string;
+  slotLabel: string;
+  estimatedMinutes: number;
+  triggeredAt: number;
 }
 
 export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
@@ -26,6 +60,22 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
   const [apiHealth, setApiHealth] = useState<{ status: string; ltaKeyConfigured: boolean } | null>(null);
   const [favoritedStops, setFavoritedStops] = useState<string[]>(['04121', '08057', '01112']);
 
+  // Watched / Favorited specific bus arrivals for 2-minute notification
+  const [watchedArrivals, setWatchedArrivals] = useState<WatchedBusArrival[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('lta_watched_arrivals');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Active triggered alert banners
+  const [triggeredAlerts, setTriggeredAlerts] = useState<TriggeredAlert[]>([]);
+
   // Sync if initialBusStopCode prop changes
   useEffect(() => {
     if (initialBusStopCode) {
@@ -38,6 +88,17 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
       setServiceNo(initialServiceNo);
     }
   }, [initialServiceNo]);
+
+  // Persist watched arrivals to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('lta_watched_arrivals', JSON.stringify(watchedArrivals));
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }, [watchedArrivals]);
 
   // Check health endpoint on mount
   useEffect(() => {
@@ -86,6 +147,27 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
       const json: LTABusArrivalResponse = await res.json();
       setData(json);
       setCountdown(20);
+
+      // Update timestamps of watched arrivals matching current stop & services
+      if (json.Services) {
+        setWatchedArrivals((prev) =>
+          prev.map((item) => {
+            if (item.busStopCode === json.BusStopCode) {
+              const matchedService = json.Services.find((s) => s.ServiceNo === item.serviceNo);
+              if (matchedService) {
+                const targetBus = matchedService[item.arrivalSlot];
+                if (targetBus?.EstimatedArrival) {
+                  return {
+                    ...item,
+                    estimatedArrival: targetBus.EstimatedArrival,
+                  };
+                }
+              }
+            }
+            return item;
+          })
+        );
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch bus arrival times';
       setError(message);
@@ -115,6 +197,127 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
 
     return () => clearInterval(timer);
   }, [autoRefresh, fetchArrivals]);
+
+  // Monitor watched arrivals every second for the 2-minute alert threshold
+  useEffect(() => {
+    const checker = setInterval(() => {
+      const now = Date.now();
+
+      setWatchedArrivals((prev) => {
+        let hasChanges = false;
+
+        const updated = prev.map((item) => {
+          if (!item.estimatedArrival) return item;
+
+          const arrivalTime = new Date(item.estimatedArrival).getTime();
+          const diffMs = arrivalTime - now;
+          const diffMinutes = Math.round(diffMs / 60000);
+
+          // Alert condition: Bus is 2 minutes away (<= 2 min and > -1 min) and hasn't notified yet
+          if (diffMinutes <= 2 && diffMinutes >= 0 && !item.notified) {
+            hasChanges = true;
+
+            // 1. Play cute 3-note melodic alert chime
+            sound.playBusArrivalAlert();
+
+            // 2. Trigger browser vibration if supported
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+              try {
+                navigator.vibrate([250, 100, 250]);
+              } catch {
+                // Ignore
+              }
+            }
+
+            // 3. Trigger native browser Notification if permitted
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(`Bus ${item.serviceNo} is 2 Minutes Away! 🚍✨`, {
+                  body: `Your bus is arriving at Stop ${item.busStopCode}. Get ready to board!`,
+                  icon: '/favicon.ico',
+                });
+              } catch {
+                // Ignore
+              }
+            }
+
+            // 4. Add to in-app triggered alert banners
+            setTriggeredAlerts((cur) => [
+              {
+                id: `${item.id}-${now}`,
+                serviceNo: item.serviceNo,
+                busStopCode: item.busStopCode,
+                slotLabel: item.slotLabel,
+                estimatedMinutes: Math.max(0, diffMinutes),
+                triggeredAt: now,
+              },
+              ...cur,
+            ]);
+
+            return { ...item, notified: true };
+          }
+
+          return item;
+        });
+
+        // Filter out expired alerts that are more than 5 minutes past arrival
+        const valid = updated.filter((item) => {
+          const arrivalTime = new Date(item.estimatedArrival).getTime();
+          return arrivalTime > now - 5 * 60000;
+        });
+
+        return hasChanges || valid.length !== prev.length ? valid : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(checker);
+  }, []);
+
+  // Toggle favorite / alert on a specific bus arrival
+  const handleToggleWatch = (
+    targetBusStop: string,
+    svcNo: string,
+    slot: 'NextBus' | 'NextBus2' | 'NextBus3',
+    slotLabel: string,
+    estimatedArrival?: string
+  ) => {
+    if (!estimatedArrival) return;
+
+    const watchId = `${targetBusStop}-${svcNo}-${slot}`;
+    const exists = watchedArrivals.some((w) => w.id === watchId);
+
+    if (exists) {
+      sound.playBubblePop();
+      setWatchedArrivals((prev) => prev.filter((w) => w.id !== watchId));
+    } else {
+      sound.playSparkleChime();
+
+      // Request browser notification permission if not yet decided
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+
+      const newWatch: WatchedBusArrival = {
+        id: watchId,
+        busStopCode: targetBusStop,
+        serviceNo: svcNo,
+        arrivalSlot: slot,
+        slotLabel,
+        estimatedArrival,
+        notified: false,
+        createdAt: Date.now(),
+      };
+
+      setWatchedArrivals((prev) => [newWatch, ...prev]);
+    }
+  };
+
+  const handleDismissTriggeredAlert = (alertId: string) => {
+    sound.playBubblePop();
+    setTriggeredAlerts((prev) => prev.filter((a) => a.id !== alertId));
+  };
 
   const handleSaveCustomKey = (key: string) => {
     setCustomKey(key);
@@ -183,7 +386,49 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
   const isLiveConnected = data?.source === 'lta-datamall-live' || apiHealth?.ltaKeyConfigured;
 
   return (
-    <div className="candy-card p-6 sm:p-8 border-2 border-[#00baff]/30 shadow-marshmallow-blue bg-white">
+    <div className="candy-card p-6 sm:p-8 border-2 border-[#00baff]/30 shadow-marshmallow-blue bg-white relative">
+      {/* 2-MINUTE ARRIVAL TRIGGERED TOAST ALERT BANNER */}
+      {triggeredAlerts.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {triggeredAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className="p-5 rounded-[28px] bg-gradient-to-r from-[#ffd8e9] via-white to-[#c6e7ff] border-2 border-[#fdb0d7] shadow-marshmallow-pink flex flex-col sm:flex-row items-center justify-between gap-4 animate-bounce"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-full bg-[#fdb0d7] text-[#7a3f60] flex items-center justify-center shadow-md animate-pulse">
+                  <BellRing className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-white text-[#884a6c] text-[11px] font-heading font-extrabold uppercase border border-[#fdb0d7]">
+                      🔔 Bus 2-Min Alert!
+                    </span>
+                    <span className="text-xs font-semibold text-[#00658d]">
+                      Stop {alert.busStopCode}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-heading font-bold text-[#171c1f] mt-0.5">
+                    Bus {alert.serviceNo} ({alert.slotLabel}) is arriving in ≤ 2 minutes! 🚍💨
+                  </h3>
+                  <p className="text-xs text-[#3d4850]">
+                    Please head toward the boarding berth now. Have your SimplyGo CandyPass ready!
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleDismissTriggeredAlert(alert.id)}
+                className="candy-btn-pink px-5 py-2.5 rounded-full font-heading font-bold text-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-sm"
+              >
+                <span>Heading Out! 🏃‍♀️</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -205,7 +450,7 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
             <Bus className="w-5 h-5 text-[#00baff]" />
           </h2>
           <p className="text-xs sm:text-sm text-[#3d4850]">
-            Direct connection to <code className="text-[#00658d] font-mono text-xs">/api/bus-arrival</code> with 20-second live updates
+            Tap any <Bell className="w-3.5 h-3.5 inline text-[#884a6c]" /> icon on an arrival time to set a friendly alert when the bus is 2 minutes away!
           </p>
         </div>
 
@@ -214,7 +459,7 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
           {isLiveConnected ? (
             <div className="px-3 py-1 rounded-full text-xs font-heading font-bold bg-[#c6e7ff] text-[#004764] border border-[#00baff] flex items-center gap-1 shadow-xs">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#00baff]" />
-              <span>Live Feed Active</span>
+              <span>Live Stream Active</span>
             </div>
           ) : (
             <button
@@ -260,6 +505,68 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ACTIVE WATCHED BUS ARRIVALS LIST */}
+      {watchedArrivals.length > 0 && (
+        <div className="mb-6 p-4 sm:p-5 rounded-[28px] bg-gradient-to-r from-[#ffd8e9]/40 via-white to-[#c6e7ff]/30 border border-[#fdb0d7] shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#884a6c]" />
+              <h3 className="text-sm font-heading font-bold text-[#884a6c]">
+                Active Bus 2-Min Alerts ({watchedArrivals.length})
+              </h3>
+            </div>
+            <span className="text-[11px] text-[#6d7881]">
+              You will be alerted with audio & notification at ≤ 2 min
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+            {watchedArrivals.map((watch) => {
+              const minutes = getMinutesUntil(watch.estimatedArrival);
+              return (
+                <div
+                  key={watch.id}
+                  className={`p-3 rounded-2xl bg-white border flex items-center justify-between gap-2 shadow-xs transition-all ${
+                    watch.notified
+                      ? 'border-[#00c49f] ring-1 ring-[#00c49f]'
+                      : 'border-[#fdb0d7]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-xl bg-[#00658d] text-white flex items-center justify-center font-heading font-bold text-xs">
+                      {watch.serviceNo}
+                    </span>
+                    <div>
+                      <div className="text-xs font-heading font-bold text-[#171c1f]">
+                        {watch.slotLabel} · Stop {watch.busStopCode}
+                      </div>
+                      <div className="text-[11px] text-[#00658d] font-semibold flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>ETA: {minutes}</span>
+                        {watch.notified && (
+                          <span className="text-[#00c49f] font-bold">· Alerted!</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      sound.playBubblePop();
+                      setWatchedArrivals((prev) => prev.filter((w) => w.id !== watch.id));
+                    }}
+                    className="w-6 h-6 rounded-full hover:bg-[#f0f4f8] text-[#6d7881] hover:text-[#93000a] flex items-center justify-center cursor-pointer transition-colors"
+                    title="Cancel Alert"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Optional Custom AccountKey Input (for instant in-browser test) */}
       {showKeyInput && (
@@ -404,6 +711,16 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
         {data && data.Services && data.Services.map((service) => {
           const loadBadge = getLoadBadge(service.NextBus?.Load);
 
+          const isNextBusWatched = watchedArrivals.some(
+            (w) => w.id === `${data.BusStopCode}-${service.ServiceNo}-NextBus`
+          );
+          const isNextBus2Watched = watchedArrivals.some(
+            (w) => w.id === `${data.BusStopCode}-${service.ServiceNo}-NextBus2`
+          );
+          const isNextBus3Watched = watchedArrivals.some(
+            (w) => w.id === `${data.BusStopCode}-${service.ServiceNo}-NextBus3`
+          );
+
           return (
             <div
               key={service.ServiceNo}
@@ -441,48 +758,129 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
                 </div>
               </div>
 
-              {/* Next Arrivals Timeline (NextBus, NextBus2, NextBus3) */}
-              <div className="flex items-center gap-3 sm:gap-4 self-end md:self-auto">
+              {/* Next Arrivals Timeline with 2-Minute Alert Bell Buttons */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
                 {/* 1st Arrival */}
-                <div className="text-center px-3 py-2 rounded-xl bg-white border border-[#00baff]/30 shadow-xs min-w-[70px]">
+                <div
+                  className={`p-2.5 rounded-2xl border flex flex-col items-center justify-between min-w-[84px] text-center transition-all ${
+                    isNextBusWatched
+                      ? 'bg-gradient-to-b from-white to-[#ffd8e9]/40 border-[#fdb0d7] shadow-marshmallow-pink ring-2 ring-[#fdb0d7]'
+                      : 'bg-white border-[#00baff]/30 shadow-xs'
+                  }`}
+                >
                   <div className="text-[10px] font-heading font-bold text-[#00658d] uppercase">
                     Next Bus
                   </div>
-                  <div className="text-base font-heading font-extrabold text-[#004764]">
+                  <div className="text-base font-heading font-extrabold text-[#004764] my-0.5">
                     {getMinutesUntil(service.NextBus?.EstimatedArrival)}
                   </div>
-                  <div className="text-[10px] text-[#6d7881]">
+                  <div className="text-[10px] text-[#6d7881] mb-1.5">
                     {service.NextBus?.Type === 'DD' ? 'Double' : 'Single'}
                   </div>
+
+                  <button
+                    onClick={() =>
+                      handleToggleWatch(
+                        data.BusStopCode,
+                        service.ServiceNo,
+                        'NextBus',
+                        'Next Bus',
+                        service.NextBus?.EstimatedArrival
+                      )
+                    }
+                    className={`w-full py-1 px-1.5 rounded-full text-[10px] font-heading font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                      isNextBusWatched
+                        ? 'bg-[#fdb0d7] text-[#7a3f60] shadow-xs'
+                        : 'bg-[#f0f4f8] text-[#3d4850] hover:bg-[#c6e7ff] hover:text-[#004764]'
+                    }`}
+                    title={isNextBusWatched ? 'Cancel 2-min Alert' : 'Alert me when 2 min away'}
+                  >
+                    <Bell className={`w-3 h-3 ${isNextBusWatched ? 'fill-current' : ''}`} />
+                    <span>{isNextBusWatched ? '≤2m Set' : 'Alert'}</span>
+                  </button>
                 </div>
 
                 {/* 2nd Arrival */}
                 {service.NextBus2?.EstimatedArrival && (
-                  <div className="text-center px-3 py-2 rounded-xl bg-white/70 border border-[#dfe3e7] min-w-[70px]">
+                  <div
+                    className={`p-2.5 rounded-2xl border flex flex-col items-center justify-between min-w-[84px] text-center transition-all ${
+                      isNextBus2Watched
+                        ? 'bg-gradient-to-b from-white to-[#ffd8e9]/40 border-[#fdb0d7] shadow-marshmallow-pink ring-2 ring-[#fdb0d7]'
+                        : 'bg-white/80 border-[#dfe3e7]'
+                    }`}
+                  >
                     <div className="text-[10px] font-heading font-bold text-[#6d7881] uppercase">
                       2nd Bus
                     </div>
-                    <div className="text-sm font-heading font-bold text-[#3d4850]">
+                    <div className="text-sm font-heading font-bold text-[#3d4850] my-0.5">
                       {getMinutesUntil(service.NextBus2?.EstimatedArrival)}
                     </div>
-                    <div className="text-[10px] text-[#6d7881]">
+                    <div className="text-[10px] text-[#6d7881] mb-1.5">
                       {service.NextBus2?.Type === 'DD' ? 'Double' : 'Single'}
                     </div>
+
+                    <button
+                      onClick={() =>
+                        handleToggleWatch(
+                          data.BusStopCode,
+                          service.ServiceNo,
+                          'NextBus2',
+                          '2nd Bus',
+                          service.NextBus2?.EstimatedArrival
+                        )
+                      }
+                      className={`w-full py-1 px-1.5 rounded-full text-[10px] font-heading font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                        isNextBus2Watched
+                          ? 'bg-[#fdb0d7] text-[#7a3f60] shadow-xs'
+                          : 'bg-[#f0f4f8] text-[#3d4850] hover:bg-[#c6e7ff] hover:text-[#004764]'
+                      }`}
+                      title={isNextBus2Watched ? 'Cancel 2-min Alert' : 'Alert me when 2 min away'}
+                    >
+                      <Bell className={`w-3 h-3 ${isNextBus2Watched ? 'fill-current' : ''}`} />
+                      <span>{isNextBus2Watched ? '≤2m Set' : 'Alert'}</span>
+                    </button>
                   </div>
                 )}
 
                 {/* 3rd Arrival */}
                 {service.NextBus3?.EstimatedArrival && (
-                  <div className="text-center px-3 py-2 rounded-xl bg-white/50 border border-[#dfe3e7] hidden sm:block min-w-[70px]">
+                  <div
+                    className={`p-2.5 rounded-2xl border flex flex-col items-center justify-between min-w-[84px] text-center transition-all hidden sm:flex ${
+                      isNextBus3Watched
+                        ? 'bg-gradient-to-b from-white to-[#ffd8e9]/40 border-[#fdb0d7] shadow-marshmallow-pink ring-2 ring-[#fdb0d7]'
+                        : 'bg-white/60 border-[#dfe3e7]'
+                    }`}
+                  >
                     <div className="text-[10px] font-heading font-bold text-[#6d7881] uppercase">
                       3rd Bus
                     </div>
-                    <div className="text-sm font-heading font-bold text-[#6d7881]">
+                    <div className="text-sm font-heading font-bold text-[#6d7881] my-0.5">
                       {getMinutesUntil(service.NextBus3?.EstimatedArrival)}
                     </div>
-                    <div className="text-[10px] text-[#6d7881]">
+                    <div className="text-[10px] text-[#6d7881] mb-1.5">
                       {service.NextBus3?.Type === 'DD' ? 'Double' : 'Single'}
                     </div>
+
+                    <button
+                      onClick={() =>
+                        handleToggleWatch(
+                          data.BusStopCode,
+                          service.ServiceNo,
+                          'NextBus3',
+                          '3rd Bus',
+                          service.NextBus3?.EstimatedArrival
+                        )
+                      }
+                      className={`w-full py-1 px-1.5 rounded-full text-[10px] font-heading font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                        isNextBus3Watched
+                          ? 'bg-[#fdb0d7] text-[#7a3f60] shadow-xs'
+                          : 'bg-[#f0f4f8] text-[#3d4850] hover:bg-[#c6e7ff] hover:text-[#004764]'
+                      }`}
+                      title={isNextBus3Watched ? 'Cancel 2-min Alert' : 'Alert me when 2 min away'}
+                    >
+                      <Bell className={`w-3 h-3 ${isNextBus3Watched ? 'fill-current' : ''}`} />
+                      <span>{isNextBus3Watched ? '≤2m Set' : 'Alert'}</span>
+                    </button>
                   </div>
                 )}
               </div>

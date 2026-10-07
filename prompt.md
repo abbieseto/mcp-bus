@@ -225,3 +225,11 @@ the api is added to Vercel, update the website
 ```text
 create a prompt.md containing all my prompt located at project main
 ```
+
+---
+
+### Prompt 7: Bus Arrival 2-Minute Favorite & Alert Notification Feature
+
+```text
+Create a notification feature in the LTABusTracker component that allows users to 'favorite' a specific bus arrival time and alerts them when the bus is 2 minutes away.
+```
