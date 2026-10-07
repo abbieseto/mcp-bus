@@ -2,7 +2,7 @@ import React from 'react';
 import { Volume2, VolumeX, Sparkles, CreditCard } from 'lucide-react';
 import { sound } from '../utils/audio';
 
-export type ScreenTab = 'plan' | 'live' | 'map' | 'candypass' | 'amenities';
+export type ScreenTab = 'plan' | 'live' | 'map' | 'candypass' | 'amenities' | 'buses';
 
 interface TopNavProps {
   currentTab: ScreenTab;
@@ -50,6 +50,16 @@ export const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             Plan & Ride
+          </button>
+          <button
+            onClick={() => handleNavClick('buses')}
+            className={`whitespace-nowrap transition-colors pb-1 border-b-2 ${
+              currentTab === 'buses'
+                ? 'text-[#00658d] border-[#00baff]'
+                : 'text-[#3d4850] border-transparent hover:text-[#00658d] hover:border-[#bdc8d2]'
+            }`}
+          >
+            Live Buses
           </button>
           <button
             onClick={() => handleNavClick('map')}

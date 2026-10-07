@@ -34,7 +34,14 @@ export default async function handler(req, res) {
     });
   }
 
-  const accountKey = process.env.LTA_ACCOUNT_KEY || req.headers['accountkey'] || req.headers['account-key'];
+  const accountKey = (
+    process.env.LTA_ACCOUNT_KEY ||
+    req.headers['accountkey'] ||
+    req.headers['account-key'] ||
+    req.query.AccountKey ||
+    req.query.accountKey ||
+    ''
+  ).trim();
 
   // If LTA_ACCOUNT_KEY is configured, call the live LTA DataMall API
   if (accountKey && accountKey.trim() !== '') {

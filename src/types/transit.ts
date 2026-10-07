@@ -10,6 +10,9 @@ export interface Station {
   amenities: string[];
   vibe: string;
   crowdLevel: 'quiet' | 'moderate' | 'lively';
+  nearbyBusStopCode?: string;
+  nearbyBusStopName?: string;
+  nearbyBusServices?: string[];
   stamp: {
     id: string;
     title: string;

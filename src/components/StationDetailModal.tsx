@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Navigation, Award, Sparkles, Clock, Check, Coffee, MapPin } from 'lucide-react';
+import { X, Navigation, Award, Sparkles, Clock, Check, Coffee, MapPin, Bus, ArrowRight } from 'lucide-react';
 import { Station, TransitLine } from '../types/transit';
 import { TRANSIT_LINES } from '../data/transitData';
 import { sound } from '../utils/audio';
@@ -11,6 +11,7 @@ interface StationDetailModalProps {
   onPlanTripToStation: (stationId: string) => void;
   isStampUnlocked: boolean;
   onCollectStamp: (stationId: string) => void;
+  onViewBusStop?: (busStopCode: string) => void;
 }
 
 export const StationDetailModal: React.FC<StationDetailModalProps> = ({
@@ -20,6 +21,7 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
   onPlanTripToStation,
   isStampUnlocked,
   onCollectStamp,
+  onViewBusStop,
 }) => {
   if (!isOpen || !station) return null;
 
@@ -88,6 +90,49 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({
               <p>{station.vibe}</p>
             </div>
           </div>
+
+          {/* Nearby LTA Bus Stop Integration */}
+          {station.nearbyBusStopCode && (
+            <div className="p-4 rounded-[24px] bg-[#e6f8ff] border border-[#00baff]/40">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Bus className="w-4 h-4 text-[#00658d]" />
+                  <span className="text-xs font-heading font-bold text-[#00658d]">
+                    Nearby LTA Bus Stop · {station.nearbyBusStopCode}
+                  </span>
+                </div>
+                {onViewBusStop && (
+                  <button
+                    onClick={() => {
+                      sound.playBubblePop();
+                      onViewBusStop(station.nearbyBusStopCode!);
+                      onClose();
+                    }}
+                    className="text-xs font-heading font-bold text-[#00658d] hover:text-[#00baff] flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Track Buses</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="text-sm font-heading font-bold text-[#004764] mb-2">
+                {station.nearbyBusStopName || `Stop ${station.nearbyBusStopCode}`}
+              </div>
+              {station.nearbyBusServices && (
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="text-xs text-[#6d7881] mr-1">Direct Bus Services:</span>
+                  {station.nearbyBusServices.map((svc) => (
+                    <span
+                      key={svc}
+                      className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-white text-[#00658d] border border-[#bdc8d2]/60 shadow-xs"
+                    >
+                      {svc}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Lines & Next Live Departures */}
           <div>

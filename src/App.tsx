@@ -12,6 +12,7 @@ import { InteractiveMapScreen } from './components/InteractiveMapScreen';
 import { CandyPassScreen } from './components/CandyPassScreen';
 import { SweetStopsScreen } from './components/SweetStopsScreen';
 import { StationDetailModal } from './components/StationDetailModal';
+import { LTABusTracker } from './components/LTABusTracker';
 import { STATIONS, INITIAL_USER_PASS, INITIAL_STAMPS, getSampleRoutes } from './data/transitData';
 import { RouteOption, StationStamp } from './types/transit';
 import { sound } from './utils/audio';
@@ -22,6 +23,7 @@ export default function App() {
   const [passCard, setPassCard] = useState(INITIAL_USER_PASS);
   const [stamps, setStamps] = useState<StationStamp[]>(INITIAL_STAMPS);
   const [activeLiveRoute, setActiveLiveRoute] = useState<RouteOption | null>(null);
+  const [trackedBusStopCode, setTrackedBusStopCode] = useState<string>('04121');
 
   // Selected station for details modal
   const [inspectedStationId, setInspectedStationId] = useState<string | null>(null);
@@ -114,6 +116,14 @@ export default function App() {
           />
         )}
 
+        {currentTab === 'buses' && (
+          <div className="space-y-6 pb-12">
+            <LTABusTracker
+              initialBusStopCode={trackedBusStopCode}
+            />
+          </div>
+        )}
+
         {currentTab === 'map' && (
           <InteractiveMapScreen
             onStationSelect={handleStationClick}
@@ -146,6 +156,10 @@ export default function App() {
         onPlanTripToStation={handlePlanTripToStation}
         isStampUnlocked={isInspectedStampUnlocked}
         onCollectStamp={handleCollectStamp}
+        onViewBusStop={(code) => {
+          setTrackedBusStopCode(code);
+          setCurrentTab('buses');
+        }}
       />
 
       {/* Mobile Ergonomic Bottom Tab Bar */}
@@ -176,6 +190,12 @@ export default function App() {
               className="hover:text-[#00658d] cursor-pointer"
             >
               Route Planner
+            </button>
+            <button
+              onClick={() => setCurrentTab('buses')}
+              className="hover:text-[#00658d] cursor-pointer"
+            >
+              Live Buses
             </button>
             <button
               onClick={() => setCurrentTab('map')}

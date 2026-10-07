@@ -1,17 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bus, RefreshCw, Clock, Wifi, Info, CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
-import { LTABusArrivalResponse, LTANextBus } from '../types/lta';
+import { Bus, RefreshCw, CheckCircle2, AlertTriangle, ExternalLink, Key, Sparkles, Heart } from 'lucide-react';
+import { LTABusArrivalResponse } from '../types/lta';
 import { sound } from '../utils/audio';
 
-export const LTABusTracker: React.FC = () => {
-  const [busStopCode, setBusStopCode] = useState<string>('04121');
-  const [serviceNo, setServiceNo] = useState<string>('');
+interface LTABusTrackerProps {
+  initialBusStopCode?: string;
+  initialServiceNo?: string;
+}
+
+export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
+  initialBusStopCode = '04121',
+  initialServiceNo = '',
+}) => {
+  const [busStopCode, setBusStopCode] = useState<string>(initialBusStopCode);
+  const [serviceNo, setServiceNo] = useState<string>(initialServiceNo);
+  const [customKey, setCustomKey] = useState<string>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('lta_custom_key') || '' : '';
+  });
+  const [showKeyInput, setShowKeyInput] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<LTABusArrivalResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(20);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [apiHealth, setApiHealth] = useState<{ status: string; ltaKeyConfigured: boolean } | null>(null);
+  const [favoritedStops, setFavoritedStops] = useState<string[]>(['04121', '08057', '01112']);
+
+  // Sync if initialBusStopCode prop changes
+  useEffect(() => {
+    if (initialBusStopCode) {
+      setBusStopCode(initialBusStopCode);
+    }
+  }, [initialBusStopCode]);
+
+  useEffect(() => {
+    if (initialServiceNo) {
+      setServiceNo(initialServiceNo);
+    }
+  }, [initialServiceNo]);
 
   // Check health endpoint on mount
   useEffect(() => {
@@ -42,8 +68,16 @@ export const LTABusTracker: React.FC = () => {
       if (serviceNo.trim()) {
         params.set('ServiceNo', serviceNo.trim());
       }
+      if (customKey.trim()) {
+        params.set('AccountKey', customKey.trim());
+      }
 
-      const res = await fetch(`/api/bus-arrival?${params.toString()}`);
+      const headers: Record<string, string> = {};
+      if (customKey.trim()) {
+        headers['AccountKey'] = customKey.trim();
+      }
+
+      const res = await fetch(`/api/bus-arrival?${params.toString()}`, { headers });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error || `HTTP error ${res.status}`);
@@ -58,7 +92,7 @@ export const LTABusTracker: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [busStopCode, serviceNo]);
+  }, [busStopCode, serviceNo, customKey]);
 
   // Initial fetch when busStopCode changes
   useEffect(() => {
@@ -82,6 +116,20 @@ export const LTABusTracker: React.FC = () => {
     return () => clearInterval(timer);
   }, [autoRefresh, fetchArrivals]);
 
+  const handleSaveCustomKey = (key: string) => {
+    setCustomKey(key);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lta_custom_key', key);
+    }
+  };
+
+  const toggleFavorite = (code: string) => {
+    sound.playBubblePop();
+    setFavoritedStops((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+  };
+
   // Format estimated minutes until arrival
   const getMinutesUntil = (estimatedArrival?: string): string => {
     if (!estimatedArrival) return 'N/A';
@@ -98,11 +146,11 @@ export const LTABusTracker: React.FC = () => {
   const getLoadBadge = (load?: string) => {
     switch (load) {
       case 'SEA':
-        return { label: 'Seats Avail', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+        return { label: 'Seats Avail 🟢', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
       case 'SDA':
-        return { label: 'Standing', color: 'bg-amber-100 text-amber-800 border-amber-300' };
+        return { label: 'Standing 🟡', color: 'bg-amber-100 text-amber-800 border-amber-300' };
       case 'LSD':
-        return { label: 'Limited', color: 'bg-rose-100 text-rose-800 border-rose-300' };
+        return { label: 'Limited 🔴', color: 'bg-rose-100 text-rose-800 border-rose-300' };
       default:
         return { label: 'Normal', color: 'bg-slate-100 text-slate-700 border-slate-200' };
     }
@@ -121,11 +169,18 @@ export const LTABusTracker: React.FC = () => {
 
   const presetStops = [
     { code: '04121', name: 'Old Parliament House (Supreme Ct)' },
-    { code: '08057', name: 'Orchard Plaza' },
+    { code: '08057', name: 'Orchard Plaza (Somerset)' },
+    { code: '09022', name: 'Orchard Stn / Lucky Plaza' },
     { code: '01112', name: 'Bugis Junction' },
     { code: '05019', name: 'Chinatown Stn Exit C' },
     { code: '03222', name: 'Clarke Quay Stn' },
+    { code: '14141', name: 'HarbourFront / VivoCity' },
+    { code: '41021', name: 'Botanic Gdns Stn' },
+    { code: '52009', name: 'Toa Payoh Bus Interchange' },
+    { code: '95019', name: 'Changi Airport PTB2' },
   ];
+
+  const isLiveConnected = data?.source === 'lta-datamall-live' || apiHealth?.ltaKeyConfigured;
 
   return (
     <div className="candy-card p-6 sm:p-8 border-2 border-[#00baff]/30 shadow-marshmallow-blue bg-white">
@@ -133,23 +188,45 @@ export const LTABusTracker: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#00c49f] animate-ping" />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                isLiveConnected ? 'bg-[#00c49f] animate-ping' : 'bg-[#00baff]'
+              }`}
+            />
             <span className="text-xs font-heading font-bold text-[#00658d] uppercase tracking-wider">
-              LTA DataMall v3 Integration
+              {isLiveConnected
+                ? 'LTA DataMall v3 Live Connected 🟢'
+                : 'LTA DataMall Integration Ready ✨'}
             </span>
-            <span className="text-xs text-[#6d7881]">· Live API Feed</span>
+            <span className="text-xs text-[#6d7881]">· Singapore Land Transport Authority</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-heading font-bold text-[#004764] flex items-center gap-2">
-            <span>Singapore Bus Arrival Radar</span>
+            <span>Singapore Live Bus Arrival Radar</span>
             <Bus className="w-5 h-5 text-[#00baff]" />
           </h2>
           <p className="text-xs sm:text-sm text-[#3d4850]">
-            Direct connection to <code className="text-[#00658d] font-mono text-xs">/api/bus-arrival</code> (Refreshes every 20 seconds)
+            Direct connection to <code className="text-[#00658d] font-mono text-xs">/api/bus-arrival</code> with 20-second live updates
           </p>
         </div>
 
         {/* API Health & Auto-refresh status */}
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {isLiveConnected ? (
+            <div className="px-3 py-1 rounded-full text-xs font-heading font-bold bg-[#c6e7ff] text-[#004764] border border-[#00baff] flex items-center gap-1 shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#00baff]" />
+              <span>Live Feed Active</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowKeyInput(!showKeyInput)}
+              className="px-3 py-1 rounded-full text-xs font-heading font-bold bg-[#ffd8e9] hover:bg-[#fdb0d7] text-[#7a3f60] border border-[#fdb0d7] flex items-center gap-1 transition-colors cursor-pointer"
+              title="Configure or test AccountKey"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Test Key</span>
+            </button>
+          )}
+
           <a
             href="/api/health"
             target="_blank"
@@ -158,7 +235,7 @@ export const LTABusTracker: React.FC = () => {
             title="Open /api/health endpoint"
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-[#00c49f]" />
-            <span>API: {apiHealth?.status === 'ok' ? 'Healthy' : 'Online'}</span>
+            <span>Health</span>
             <ExternalLink className="w-3 h-3 text-[#6d7881]" />
           </a>
 
@@ -170,7 +247,7 @@ export const LTABusTracker: React.FC = () => {
                 : 'bg-white text-[#6d7881] border-[#dfe3e7]'
             }`}
           >
-            Auto: {autoRefresh ? `Every 20s (${countdown}s)` : 'Paused'}
+            {autoRefresh ? `Auto: ${countdown}s` : 'Paused'}
           </button>
 
           <button
@@ -184,14 +261,60 @@ export const LTABusTracker: React.FC = () => {
         </div>
       </div>
 
+      {/* Optional Custom AccountKey Input (for instant in-browser test) */}
+      {showKeyInput && (
+        <div className="p-4 rounded-[24px] bg-[#ffd8e9]/30 border border-[#fdb0d7] mb-6 space-y-2 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-heading font-bold text-[#884a6c] flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5" />
+              <span>LTA AccountKey In-Browser Tester:</span>
+            </span>
+            <span className="text-[11px] text-[#6d7881]">
+              Saved in Vercel? You don't need to enter anything here.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              placeholder="Paste LTA DataMall AccountKey..."
+              value={customKey}
+              onChange={(e) => handleSaveCustomKey(e.target.value)}
+              className="flex-1 px-4 py-2 rounded-full bg-white text-xs font-mono border border-[#bdc8d2] focus:border-[#00baff] focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                fetchArrivals(true);
+                setShowKeyInput(false);
+              }}
+              className="candy-btn-pink px-4 py-2 rounded-full text-xs font-heading font-bold cursor-pointer"
+            >
+              Apply & Test
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search & Parameters Control */}
       <div className="p-4 rounded-[24px] bg-[#f0f4f8] border border-[#dfe3e7] mb-6 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-[1fr,1fr,auto] gap-3 items-end">
           {/* BusStopCode Input */}
           <div>
-            <label className="block text-xs font-heading font-bold text-[#3d4850] mb-1">
-              Bus Stop Code (Required, 5 digits)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-heading font-bold text-[#3d4850]">
+                Bus Stop Code (5 Digits)
+              </label>
+              <button
+                onClick={() => toggleFavorite(busStopCode)}
+                className="text-[11px] font-heading font-bold text-[#884a6c] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Heart
+                  className={`w-3.5 h-3.5 ${
+                    favoritedStops.includes(busStopCode) ? 'fill-[#fdb0d7] text-[#884a6c]' : ''
+                  }`}
+                />
+                <span>{favoritedStops.includes(busStopCode) ? 'Saved' : 'Save'}</span>
+              </button>
+            </div>
             <input
               type="text"
               value={busStopCode}
@@ -228,7 +351,7 @@ export const LTABusTracker: React.FC = () => {
         {/* Quick Presets */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1">
           <span className="text-[11px] font-heading font-semibold text-[#6d7881] mr-1">
-            Presets:
+            Singapore Hubs:
           </span>
           {presetStops.map((preset) => (
             <button
@@ -249,11 +372,11 @@ export const LTABusTracker: React.FC = () => {
         </div>
       </div>
 
-      {/* Info / Source Note */}
-      {data?.note && (
-        <div className="mb-4 p-3 rounded-[20px] bg-[#ffd8e9]/30 border border-[#fdb0d7] flex items-center gap-2.5 text-xs text-[#7a3f60]">
-          <Info className="w-4 h-4 shrink-0 text-[#884a6c]" />
-          <span>{data.note}</span>
+      {/* Live Data Note / Source Indicator */}
+      {data?.source === 'lta-datamall-live' && (
+        <div className="mb-4 p-3 rounded-[20px] bg-emerald-50 border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-800">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>Live LTA DataMall v3 Stream Active: Showing official real-time bus arrivals for Singapore.</span>
         </div>
       )}
 
