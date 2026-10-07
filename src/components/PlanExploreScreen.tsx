@@ -4,6 +4,7 @@ import { STATIONS, TRANSIT_LINES, getSampleRoutes, INITIAL_VEHICLES } from '../d
 import { TransitMode, RouteOption } from '../types/transit';
 import { sound } from '../utils/audio';
 import { ASSETS } from '../assets/images';
+import { LTABusTracker } from './LTABusTracker';
 
 interface PlanExploreScreenProps {
   onSelectRouteForLiveTrip: (route: RouteOption) => void;
@@ -399,6 +400,9 @@ export const PlanExploreScreen: React.FC<PlanExploreScreenProps> = ({
           })}
         </div>
       </div>
+
+      {/* Singapore LTA Live Bus Arrival Radar (Direct LTA DataMall Integration) */}
+      <LTABusTracker />
 
       {/* Live Nearby Radar / Station Departures */}
       <div className="candy-card p-6 sm:p-8 bg-gradient-to-r from-white via-[#f0f4f8] to-white">
