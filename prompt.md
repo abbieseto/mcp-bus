@@ -233,3 +233,11 @@ create a prompt.md containing all my prompt located at project main
 ```text
 Create a notification feature in the LTABusTracker component that allows users to 'favorite' a specific bus arrival time and alerts them when the bus is 2 minutes away.
 ```
+
+---
+
+### Prompt 8: LTA Service Status Board & Disruption Alerts
+
+```text
+Create a service status board in the LTABusTracker that displays real-time LTA service disruptions or maintenance alerts for the monitored bus stop.
+```

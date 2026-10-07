@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import healthHandler from './api/health.js';
 import busArrivalHandler from './api/bus-arrival.js';
+import serviceAlertsHandler from './api/service-alerts.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ async function startServer() {
   app.all('/api/health', (req, res) => healthHandler(req, res));
   app.all('/api/bus-arrival', (req, res) => busArrivalHandler(req, res));
   app.all('/api/BusArrival', (req, res) => busArrivalHandler(req, res));
+  app.all('/api/service-alerts', (req, res) => serviceAlertsHandler(req, res));
 
   if (!isProd) {
     // Development mode: Mount Vite middleware

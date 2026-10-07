@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LTABusArrivalResponse, LTANextBus } from '../types/lta';
 import { sound } from '../utils/audio';
+import { LTAServiceStatusBoard } from './LTAServiceStatusBoard';
 
 interface LTABusTrackerProps {
   initialBusStopCode?: string;
@@ -678,6 +679,15 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
           ))}
         </div>
       </div>
+
+      {/* LTA Real-Time Service Status & Disruption Board */}
+      <LTAServiceStatusBoard
+        busStopCode={busStopCode}
+        availableServices={
+          data?.Services?.map((s) => s.ServiceNo) ||
+          (serviceNo ? [serviceNo] : ['7', '14', '190', '197'])
+        }
+      />
 
       {/* Live Data Note / Source Indicator */}
       {data?.source === 'lta-datamall-live' && (

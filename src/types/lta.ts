@@ -26,3 +26,17 @@ export interface LTABusArrivalResponse {
   note?: string;
   error?: string;
 }
+
+export interface LTAServiceAlert {
+  id: string;
+  category: 'diversion' | 'maintenance' | 'delay' | 'advisory';
+  severity: 'info' | 'warning' | 'critical';
+  title: string;
+  description: string;
+  affectedServices: string[];
+  affectedBusStops?: string[];
+  startTime: string;
+  estimatedEndTime?: string;
+  advice: string;
+  source: string;
+}

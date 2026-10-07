@@ -41,6 +41,15 @@ export default function handler(req, res) {
           ServiceNo: 'Bus service number (optional, e.g. 7)',
         },
       },
+      {
+        path: '/api/service-alerts',
+        method: 'GET',
+        description: 'LTA real-time service disruptions, maintenance, and diversion alerts',
+        params: {
+          BusStopCode: '5-digit bus stop code (optional)',
+          ServiceNo: 'Bus service number (optional)',
+        },
+      },
     ],
   });
 }
