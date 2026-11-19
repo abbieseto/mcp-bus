@@ -25,12 +25,12 @@ export const STATIONS: Record<string, Station> = {
     id: 'orchard',
     name: 'Orchard Road',
     japaneseName: '乌节路 · NS22/TE14',
-    lineIds: ['candy-ccl', 'fluffy-bus'],
+    lineIds: ['candy-ccl', 'fluffy-bus', 'changi-bus-36'],
     x: 38,
     y: 38,
     nearbyBusStopCode: '08057',
-    nearbyBusStopName: 'Orchard Plaza / Somest',
-    nearbyBusServices: ['7', '14', '16', '65', '106', '111', '123', '175', '502'],
+    nearbyBusStopName: 'Orchard Plaza / Somerset',
+    nearbyBusServices: ['36', '7', '14', '16', '65', '106', '111', '123', '175', '502'],
     amenities: ['Uncle Wafer Ice Cream Cart 🍨', 'Takashimaya Food Hall', 'Sanrio & Pop Mart Megastore', 'Matcha Crepe Corner'],
     vibe: 'Vibrant neon shopping avenue with sweet street treats',
     crowdLevel: 'lively',
@@ -65,12 +65,12 @@ export const STATIONS: Record<string, Station> = {
     id: 'marina-bay',
     name: 'Marina Bay Sands',
     japaneseName: '滨海湾 · DT16/NS27',
-    lineIds: ['sky-dtl', 'marina-ferry'],
+    lineIds: ['sky-dtl', 'marina-ferry', 'changi-bus-36'],
     x: 74,
     y: 62,
     nearbyBusStopCode: '04121',
     nearbyBusStopName: 'Old Parliament House (Supreme Ct)',
-    nearbyBusServices: ['7', '14', '190', '197', '961'],
+    nearbyBusServices: ['36', '7', '14', '190', '197', '961'],
     amenities: ['Gardens by the Bay Supertrees 🌸', 'Cloud Forest Mist Walk', 'Kaya Toast Concourse', 'SkyPark Infinity Deck'],
     vibe: 'Glittering waterfront with breezy evening laser light shows',
     crowdLevel: 'moderate',
@@ -145,12 +145,12 @@ export const STATIONS: Record<string, Station> = {
     id: 'changi-airport',
     name: 'Changi Jewel Vortex',
     japaneseName: '樟宜机场 · CG2',
-    lineIds: ['candy-ccl'],
+    lineIds: ['candy-ccl', 'changi-bus-36'],
     x: 90,
     y: 26,
     nearbyBusStopCode: '95019',
     nearbyBusStopName: 'Changi Airport PTB2',
-    nearbyBusServices: ['24', '27', '34', '36', '53', '110', '858'],
+    nearbyBusServices: ['36', '24', '27', '34', '53', '110', '858'],
     amenities: ['Rain Vortex Waterfall (40m!) 🌊', 'Canopy Park Glass Bridge', 'Bake Cheese Tart Kiosk', 'Pokemon Center SG'],
     vibe: 'World-famous indoor rainforest surrounded by clouds',
     crowdLevel: 'moderate',
@@ -251,6 +251,18 @@ export const TRANSIT_LINES: Record<string, TransitLine> = {
     stops: ['toa-payoh', 'orchard', 'clarke-quay', 'chinatown'],
     frequency: 'Every 5 mins',
     status: 'smooth'
+  },
+  'changi-bus-36': {
+    id: 'changi-bus-36',
+    name: 'Changi Airport Express Bus #36',
+    code: 'B-36',
+    color: '#00baff',
+    accentColor: '#004764',
+    mode: 'bus',
+    icon: '✈️',
+    stops: ['changi-airport', 'marina-bay', 'orchard'],
+    frequency: 'Every 8-10 mins',
+    status: 'sparkling'
   },
   'marina-ferry': {
     id: 'marina-ferry',
@@ -414,6 +426,18 @@ export const INITIAL_VEHICLES: MovingVehicle[] = [
     toStationId: 'orchard',
     nextStopName: 'Orchard Road',
     etaMinutes: 2
+  },
+  {
+    id: 'v-sg-bus-36',
+    lineId: 'changi-bus-36',
+    lineName: 'Changi Airport Express Bus #36',
+    color: '#00baff',
+    mode: 'bus',
+    progress: 0.45,
+    fromStationId: 'orchard',
+    toStationId: 'changi-airport',
+    nextStopName: 'Changi Jewel Vortex',
+    etaMinutes: 3
   }
 ];
 
@@ -568,6 +592,45 @@ export function getSampleRoutes(fromId: string, toId: string): RouteOption[] {
           fromStation: 'Sheltered Bus Stop',
           toStation: toName,
           intermediateStops: ['Toa Payoh Central', 'Orchard Road', 'Clarke Quay Riverside']
+        }
+      ]
+    },
+    {
+      id: 'route-bus-36-changi',
+      badge: 'sweetest',
+      badgeLabel: 'Changi Bus #36 Express',
+      badgeEmoji: '✈️',
+      durationMinutes: 29,
+      departureTime: '10:33 AM',
+      arrivalTime: '11:02 AM',
+      price: 'S$2.05',
+      caloriesWalked: 35,
+      transfers: 0,
+      lines: [TRANSIT_LINES['changi-bus-36']],
+      stopsCount: 7,
+      co2Saved: '820g CO₂',
+      steps: [
+        {
+          id: 'step-b36-1',
+          mode: 'walk',
+          instruction: `Walk to Bus Stop (${STATIONS[fromId]?.nearbyBusStopName || fromName})`,
+          detail: 'Air-conditioned connection with digital arrival display & wheelchair ramp',
+          durationMinutes: 2,
+          fromStation: fromName,
+          toStation: 'Changi Bus Bay'
+        },
+        {
+          id: 'step-b36-2',
+          mode: 'bus',
+          instruction: 'Board Changi Airport Express Bus #36 (Go-Ahead SG)',
+          detail: `Direct express loop connecting Orchard, Marina Bay / Suntec & Changi Airport PTB 1/2/3/4 with luggage racks`,
+          durationMinutes: 27,
+          lineId: 'changi-bus-36',
+          lineName: 'Changi Airport Express Bus #36',
+          lineColor: '#00baff',
+          fromStation: 'Changi Bus Bay',
+          toStation: toName,
+          intermediateStops: ['Orchard Road', 'Suntec City / Marina Bay', 'Marine Parade', 'Changi Airport PTB2']
         }
       ]
     }

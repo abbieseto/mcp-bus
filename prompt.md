@@ -241,3 +241,37 @@ Create a notification feature in the LTABusTracker component that allows users t
 ```text
 Create a service status board in the LTABusTracker that displays real-time LTA service disruptions or maintenance alerts for the monitored bus stop.
 ```
+
+---
+
+### Prompt 9: Add Bus 36 Changi Airport Express Integration
+
+```text
+add bus 36
+```
+
+---
+
+### Prompt 10: Embed Microsoft Clarity Analytics
+
+```text
+embed microsoft clarity to this webpage using the following code:
+
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "zfzv37h5pm");
+</script>
+```
+
+---
+
+### Prompt 11: Git Remote Push
+
+```text
+git push https://<GITHUB_PERSONAL_ACCESS_TOKEN>@github.com/abbieseto/mcp-bus
+```
+
+

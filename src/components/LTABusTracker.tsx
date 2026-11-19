@@ -372,6 +372,7 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
   };
 
   const presetStops = [
+    { code: '95019', name: 'Changi Airport PTB2 ✈️ (Bus 36 Loop)' },
     { code: '04121', name: 'Old Parliament House (Supreme Ct)' },
     { code: '08057', name: 'Orchard Plaza (Somerset)' },
     { code: '09022', name: 'Orchard Stn / Lucky Plaza' },
@@ -381,7 +382,6 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
     { code: '14141', name: 'HarbourFront / VivoCity' },
     { code: '41021', name: 'Botanic Gdns Stn' },
     { code: '52009', name: 'Toa Payoh Bus Interchange' },
-    { code: '95019', name: 'Changi Airport PTB2' },
   ];
 
   const isLiveConnected = data?.source === 'lta-datamall-live' || apiHealth?.ltaKeyConfigured;
@@ -678,6 +678,59 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Popular Service Quick Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#bdc8d2]/40">
+          <span className="text-[11px] font-heading font-semibold text-[#6d7881] mr-1">
+            Filter Service:
+          </span>
+          <button
+            onClick={() => {
+              sound.playBubblePop();
+              setServiceNo('');
+            }}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+              serviceNo === ''
+                ? 'bg-[#00658d] text-white border-[#00658d] font-bold shadow-xs'
+                : 'bg-white text-[#3d4850] border-[#bdc8d2]/60 hover:border-[#00baff]'
+            }`}
+          >
+            All Services
+          </button>
+          <button
+            onClick={() => {
+              sound.playSparkleChime();
+              setServiceNo('36');
+              // If not already on an airport or connected stop, recommend Changi Stop 95019
+              if (!['95019', '08057', '04121', '09022'].includes(busStopCode)) {
+                setBusStopCode('95019');
+              }
+            }}
+            className={`text-xs px-3 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1 ${
+              serviceNo === '36'
+                ? 'bg-[#00baff] text-white border-[#004764] font-bold shadow-xs'
+                : 'bg-white text-[#004764] border-[#00baff] hover:bg-[#c6e7ff]/50'
+            }`}
+          >
+            <span>✈️ Bus 36 (Changi Express)</span>
+          </button>
+          {['7', '14', '190', '197'].map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                sound.playBubblePop();
+                setServiceNo(s);
+              }}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                serviceNo === s
+                  ? 'bg-[#00658d] text-white border-[#00658d] font-bold shadow-xs'
+                  : 'bg-white text-[#3d4850] border-[#bdc8d2]/60 hover:border-[#00baff]'
+              }`}
+            >
+              Bus {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* LTA Real-Time Service Status & Disruption Board */}
@@ -748,13 +801,23 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-heading font-bold text-[#171c1f]">
                       {getTypeBadge(service.NextBus?.Type)}
                     </span>
+                    {service.ServiceNo === '36' && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#c6e7ff] text-[#004764] border border-[#00baff] font-heading font-bold flex items-center gap-1 shadow-xs">
+                        <span>✈️ Changi Express Loop</span>
+                      </span>
+                    )}
                     {service.NextBus?.Feature === 'WAB' && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-white text-[#00658d] border border-[#bdc8d2]/60" title="Wheelchair Accessible Bus">
                         ♿ WAB
+                      </span>
+                    )}
+                    {service.ServiceNo === '36' && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-white text-[#00658d] border border-[#bdc8d2]/60 hidden sm:inline" title="Equipped with luggage storage bays">
+                        🧳 Luggage Bays
                       </span>
                     )}
                   </div>
@@ -764,6 +827,11 @@ export const LTABusTracker: React.FC<LTABusTrackerProps> = ({
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${loadBadge.color}`}>
                       {loadBadge.label}
                     </span>
+                    {service.ServiceNo === '36' && (
+                      <span className="text-[10px] text-[#00658d] hidden md:inline font-semibold">
+                        · Orchard ↔ Marina Bay ↔ Changi Terminals 1, 2, 3, 4
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

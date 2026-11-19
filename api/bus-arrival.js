@@ -84,14 +84,14 @@ export default async function handler(req, res) {
   // Fallback when LTA_ACCOUNT_KEY is not yet configured in environment variables
   // Generates dynamic, realistic LTA v3 format data based on current timestamp
   const now = new Date();
-  const generateArrival = (minutesAhead, type = 'DD', load = 'SEA') => {
+  const generateArrival = (minutesAhead, type = 'DD', load = 'SEA', origin = '95009', dest = '95009') => {
     const arrivalTime = new Date(now.getTime() + minutesAhead * 60000);
     return {
-      OriginCode: '16009',
-      DestinationCode: '17009',
+      OriginCode: origin,
+      DestinationCode: dest,
       EstimatedArrival: arrivalTime.toISOString(),
-      Latitude: '1.2934',
-      Longitude: '103.8521',
+      Latitude: '1.3592',
+      Longitude: '103.9893',
       VisitNumber: '1',
       Load: load, // SEA = Seats Available, SDA = Standing Available, LSD = Limited Standing
       Feature: 'WAB', // Wheelchair Accessible Bus
@@ -101,32 +101,39 @@ export default async function handler(req, res) {
 
   const defaultServices = [
     {
+      ServiceNo: '36',
+      Operator: 'GAS', // Go-Ahead Singapore operates Service 36 Changi Express loop
+      NextBus: generateArrival(2, 'DD', 'SEA', '95009', '95009'),
+      NextBus2: generateArrival(9, 'DD', 'SEA', '95009', '95009'),
+      NextBus3: generateArrival(18, 'SD', 'SDA', '95009', '95009'),
+    },
+    {
       ServiceNo: '7',
       Operator: 'SBST',
-      NextBus: generateArrival(2, 'DD', 'SEA'),
-      NextBus2: generateArrival(9, 'SD', 'SDA'),
-      NextBus3: generateArrival(18, 'DD', 'SEA'),
+      NextBus: generateArrival(3, 'DD', 'SEA', '16009', '17009'),
+      NextBus2: generateArrival(10, 'SD', 'SDA', '16009', '17009'),
+      NextBus3: generateArrival(19, 'DD', 'SEA', '16009', '17009'),
     },
     {
       ServiceNo: '14',
       Operator: 'SBST',
-      NextBus: generateArrival(4, 'DD', 'SDA'),
-      NextBus2: generateArrival(12, 'DD', 'SEA'),
-      NextBus3: generateArrival(23, 'SD', 'SEA'),
+      NextBus: generateArrival(5, 'DD', 'SDA', '16009', '17009'),
+      NextBus2: generateArrival(12, 'DD', 'SEA', '16009', '17009'),
+      NextBus3: generateArrival(23, 'SD', 'SEA', '16009', '17009'),
     },
     {
       ServiceNo: '190',
       Operator: 'SMRT',
-      NextBus: generateArrival(1, 'DD', 'SDA'),
-      NextBus2: generateArrival(8, 'DD', 'SEA'),
-      NextBus3: generateArrival(15, 'DD', 'SEA'),
+      NextBus: generateArrival(1, 'DD', 'SDA', '44009', '03222'),
+      NextBus2: generateArrival(8, 'DD', 'SEA', '44009', '03222'),
+      NextBus3: generateArrival(15, 'DD', 'SEA', '44009', '03222'),
     },
     {
       ServiceNo: '197',
       Operator: 'SBST',
-      NextBus: generateArrival(6, 'SD', 'SEA'),
-      NextBus2: generateArrival(14, 'DD', 'SEA'),
-      NextBus3: generateArrival(25, 'SD', 'LSD'),
+      NextBus: generateArrival(6, 'SD', 'SEA', '52009', '05019'),
+      NextBus2: generateArrival(14, 'DD', 'SEA', '52009', '05019'),
+      NextBus3: generateArrival(25, 'SD', 'LSD', '52009', '05019'),
     },
   ];
 

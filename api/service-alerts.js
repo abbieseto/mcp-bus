@@ -35,6 +35,19 @@ export default async function handler(req, res) {
   // Known Singapore transit advisories database mapped to bus stop codes and service numbers
   const allKnownAdvisories = [
     {
+      id: 'adv-changi-36',
+      category: 'advisory',
+      severity: 'info',
+      title: 'Bus 36 Changi Airport Express Terminal Loop Running On-Time',
+      description: 'Express loop connecting Orchard, Suntec City, Marine Parade, and Terminals 1, 2, 3, 4 is operating smoothly.',
+      affectedServices: ['36'],
+      affectedBusStops: ['95019', '08057', '04121'],
+      startTime: 'Today, 05:30',
+      estimatedEndTime: 'Tomorrow, 00:30',
+      advice: 'Double-decker fleet with high-capacity luggage bays deployed. Frequency is every 8-10 mins.',
+      source: 'Go-Ahead Singapore (GAS) & LTA Operations'
+    },
+    {
       id: 'adv-civic-04121',
       category: 'diversion',
       severity: 'warning',

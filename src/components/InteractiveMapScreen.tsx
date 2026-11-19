@@ -92,6 +92,14 @@ export const InteractiveMapScreen: React.FC<InteractiveMapScreenProps> = ({
       name: 'Pandan Green Bus #190',
     },
     {
+      id: 'changi-bus-36',
+      color: '#00baff',
+      strokeWidth: 5.5,
+      strokeDasharray: '5 3',
+      d: 'M 38 38 L 74 62 L 90 26',
+      name: 'Changi Airport Express Bus #36',
+    },
+    {
       id: 'marina-ferry',
       color: '#38bdf8',
       strokeWidth: 6,
@@ -202,6 +210,10 @@ export const InteractiveMapScreen: React.FC<InteractiveMapScreenProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-1.5 rounded-full bg-[#00c49f]" />
               <span>Double-Decker #190</span>
+            </div>
+            <div className="flex items-center gap-1.5 col-span-2">
+              <span className="w-3 h-1 rounded-full bg-[#00baff] border border-dashed border-[#004764]" />
+              <span>Bus #36 Changi Express ✈️</span>
             </div>
           </div>
         </div>
